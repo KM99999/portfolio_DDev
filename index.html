@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Joao vitor alencar silva | Full-Stack Developer</title>
+  <meta name="description" content="Portfolio of Joao vitor alencar silva — Full-Stack Developer." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css" />
+  <link rel="stylesheet" href="styles.css?v=16" />
+</head>
+<body>
+
+  <!-- ============ NAV ============ -->
+  <header class="nav">
+    <div class="nav__inner">
+      <a href="#home" class="nav__logo">Joao vitor alencar silva</a>
+      <nav class="nav__links" aria-label="Primary">
+        <a href="#home" data-i18n="nav.about">About</a>
+        <a href="#experience" data-i18n="nav.experience">Experience</a>
+        <a href="#projects" data-i18n="nav.projects">Projects</a>
+        <a href="#skills" data-i18n="nav.skills">Skills</a>
+      </nav>
+      <div class="nav__actions">
+
+        <!-- Language switcher (replaces former Resume button) -->
+        <div class="lang-switcher">
+          <button class="btn btn--outline lang-btn" id="langBtn" aria-haspopup="listbox" aria-expanded="false">
+            <span class="fi fi-gb" id="currentFlag" aria-hidden="true"></span>
+            <span data-i18n="ui.language">Language</span>
+            <svg class="lang-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul class="lang-menu" id="langMenu" role="listbox">
+            <li><button type="button" data-lang="en"    role="option"><span class="fi fi-gb"></span> English</button></li>
+            <li><button type="button" data-lang="pt-BR" role="option"><span class="fi fi-br"></span> Português (Brasil)</button></li>
+            <li><button type="button" data-lang="es"    role="option"><span class="fi fi-es"></span> Español</button></li>
+          </ul>
+        </div>
+
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <button class="nav__burger" id="navBurger" aria-label="Open menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ============ HERO / ABOUT ============ -->
+    <section id="home" class="hero">
+      <div class="hero__grid">
+        <div class="hero__text">
+          <h1 class="hero__title">
+            <span class="gradient-text" id="typewriter"></span><span class="caret">|</span>
+          </h1>
+          <p data-i18n="hero.p1">Production and AI integrations.</p>
+          <p data-i18n="hero.p2">
+            Led the development of enterprise applications using React, Next.js, Node.js, Python,
+            TypeScript, and modern cloud infrastructure (AWS, GCP, Vercel) with secure CI/CD
+            pipelines.
+          </p>
+          <p data-i18n="hero.contributions">Key contributions include:</p>
+          <ul class="bullets">
+            <li data-i18n="hero.b1">Designed multi-tenant SaaS platforms with dashboards, payment systems, analytics, and role-based access control.</li>
+            <li data-i18n="hero.b2">Built AI-powered features such as intelligent chatbots, RAG pipelines, and custom AI agents using OpenAI and LangChain.</li>
+            <li data-i18n="hero.b3">Integrated automation workflows with Zapier, n8n, Make, and custom API solutions.</li>
+            <li data-i18n="hero.b4">Designed scalable backend systems using PostgreSQL, MySQL, MongoDB, and Redis.</li>
+            <li data-i18n="hero.b5">Developed secure RESTful and GraphQL APIs, optimized for performance and maintainability.</li>
+            <li data-i18n="hero.b6">Implemented MLOps-inspired deployment strategies for monitoring, scalability, and reliability.</li>
+          </ul>
+          <p data-i18n="hero.p3">
+            Significant contributions to SaaS products across fintech, healthcare, legal, and real
+            estate sectors — ensuring smooth communication, alignment with business goals, and
+            measurable impact.
+          </p>
+          <blockquote class="hero__quote" data-i18n="hero.quote">
+            Focused on building secure, scalable, and high-performance digital products that
+            accelerate launches and optimize operational efficiency.
+          </blockquote>
+        </div>
+
+        <div class="hero__media">
+          <div class="frame">
+            <span class="dot dot--tl"></span>
+            <span class="dot dot--tr"></span>
+            <span class="dot dot--bl"></span>
+            <span class="dot dot--br"></span>
+            <img src="./assets/profile.png" alt="Joao vitor alencar silva" onerror="this.style.display='none'; this.parentElement.classList.add('frame--empty')" />
+            <div class="frame__placeholder">Add your photo to<br/><code>./assets/profile.png</code></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ WORK EXPERIENCE ============ -->
+    <section id="experience" class="section">
+      <h2 class="section__title" data-i18n="section.experience">Work Experience</h2>
+      <div class="timeline">
+
+        <article class="card timeline__item">
+          <span class="dot dot--tl"></span><span class="dot dot--tr"></span>
+          <div class="timeline__header">
+            <div>
+              <h3>Java Full-Stack Developer</h3>
+            </div>
+            <span class="pill">September 2021</span>
+          </div>
+          <ul class="bullets">
+            <li>Developed and deployed 2+ production full-stack applications using Spring Boot, React.js, PostgreSQL, and TypeScript, delivering 99.9% uptime to 100,000+ active users.</li>
+            <li>Designed 25+ RESTful APIs (authentication, validation, error handling) with Spring Boot / Spring MVC and improved response times by 40% through PostgreSQL query optimization and Redis caching.</li>
+            <li>Built a scalable microservices architecture with Spring Boot and Redis, processing 2M+ events per month via event-driven design patterns and distributed caching.</li>
+            <li>Implemented a Redis caching layer on high-traffic endpoints, reducing database load by 65% and improving response times by 50%.</li>
+            <li>Developed a reactive React.js frontend with Redux state management and TypeScript, seamlessly integrated with Spring Boot backend APIs.</li>
+            <li>Built an automated CI/CD pipeline using Docker, Jenkins, GitHub Actions, and AWS, reducing deployment time from 2 hours to 15 minutes (87% reduction).</li>
+            <li>Enhanced application security with Spring Security, using OWASP-compliant JWT, OAuth2, and RBAC.</li>
+            <li>Achieved 95% code coverage with JUnit 5 and Mockito, reduced production bugs by 70%, and increased deployment frequency from weekly to daily.</li>
+          </ul>
+        </article>
+
+        <article class="card timeline__item">
+          <span class="dot dot--tl"></span><span class="dot dot--tr"></span>
+          <div class="timeline__header">
+            <div>
+              <h3>Full-Stack Developer</h3>
+            </div>
+            <span class="pill">March 2023 - December 2025</span>
+          </div>
+          <ul class="bullets">
+            <li>Designed and developed scalable web applications using React, Node.js, Python, and cloud-native architectures (AWS and Azure).</li>
+            <li>Led the integration of AI/ML models into production systems, including natural language processing automation, predictive analytics, and intelligent data processing pipelines.</li>
+            <li>Optimized backend performance, improved system scalability, and implemented secure RESTful and GraphQL APIs.</li>
+            <li>Collaborated with international cross-disciplinary teams to deliver high-performance solutions for EU and North American clients.</li>
+          </ul>
+        </article>
+
+        <article class="card timeline__item">
+          <span class="dot dot--tl"></span><span class="dot dot--tr"></span>
+          <div class="timeline__header">
+            <div>
+              <h3>Full-Stack Developer</h3>
+            </div>
+            <span class="pill">January 2026 - Present</span>
+          </div>
+          <ul class="bullets">
+            <li>Currently working as a freelancer on the Workana platform.</li>
+          </ul>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ============ PROJECTS ============ -->
+    <section id="projects" class="section">
+      <h2 class="section__title" data-i18n="section.projects">Projects</h2>
+
+      <div class="projects-toolbar">
+        <div class="filter-tabs" id="projectFilters" role="tablist">
+          <button type="button" class="filter-tab is-active" data-filter="all" role="tab" aria-selected="true">
+            All <span class="filter-count" data-count="all">0</span>
+          </button>
+          <button type="button" class="filter-tab" data-filter="web" role="tab" aria-selected="false">
+            Web <span class="filter-count" data-count="web">0</span>
+          </button>
+          <button type="button" class="filter-tab" data-filter="mobile" role="tab" aria-selected="false">
+            Mobile <span class="filter-count" data-count="mobile">0</span>
+          </button>
+          <button type="button" class="filter-tab" data-filter="ai" role="tab" aria-selected="false">
+            AI/LLM <span class="filter-count" data-count="ai">0</span>
+          </button>
+          <button type="button" class="filter-tab" data-filter="fullstack" role="tab" aria-selected="false">
+            Full-Stack <span class="filter-count" data-count="fullstack">0</span>
+          </button>
+        </div>
+        <div class="projects-pagination">
+          <span id="projectsShown">0</span> <span class="muted">/</span> <span id="projectsTotal">0</span>
+        </div>
+      </div>
+
+      <div class="projects-grid" id="projectsGrid">
+
+        <!-- PROJECT CARD TEMPLATE
+             - data-category accepts space-separated categories: web, mobile, ai, fullstack
+             - data-featured="true" shows the gold ★ Featured badge
+             - Drop a screenshot at the path shown in the placeholder, or set <img src="./assets/your-image.png"> -->
+
+        <article class="project-card" data-project-id="homeschooling" data-category="web fullstack" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/Optimized Homeschooling Pioneer With Adobe Commerce To Boost Relevant Traffic/Adobe-Commerce-for-LMS-Platform.webp" alt="Homeschooling Adobe Commerce site preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2025</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">Web</span>
+            </div>
+            <h3>Optimized Homeschooling Pioneer With Adobe Commerce To Boost Relevant Traffic</h3>
+            <p>Optimized an Adobe Commerce site for a homeschooling pioneer — reorganizing content and navigation, adding real-time enrollment chat, simplifying menus, and centralizing data — to boost relevant traffic, enrollments, and revenue.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=swift"   alt="Swift"   loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=java"    alt="Java"    loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=angular" alt="Angular" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=nodejs"  alt="Node.js" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=mysql"   alt="MySQL"   loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=androidstudio" alt="Android" loading="lazy" />
+              <span class="tech-fallback" title="Apache Solr">Solr</span>
+              <span class="tech-fallback" title="Adobe Experience Platform">AEP</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="sportsapparel" data-category="mobile web fullstack" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/Developed a Mobile App with Cutting-Edge Features for Leading Sports Apparel Company/mobile-app-development.webp" alt="Sports apparel mobile app preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2025</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">Mobile</span>
+              <span class="badge badge--category">Web</span>
+            </div>
+            <h3>Developed a Mobile App with Cutting-Edge Features for Leading Sports Apparel Company</h3>
+            <p>A cross-platform mobile and eCommerce app for a leading UAE sports-apparel retailer (GMG), with real-time Salesforce integration, an omnichannel browser-based storefront, and multi-region, multilingual shopping across the UAE, Qatar, Saudi Arabia, and Kuwait.</p>
+            <div class="project-card__icons">
+              <span class="tech-fallback" title="CRM">CRM</span>
+              <span class="tech-fallback" title="Development Languages">Dev</span>
+              <span class="tech-fallback" title="API">API</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="equinewelfare" data-category="web mobile fullstack" data-featured="true">
+          <div class="project-card__media">
+            <video src="./assets/Equine registration platform for tracking racehorses’ welfare/4ece-4455-8004-f8943a1d180e.mp4" autoplay muted loop playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2025</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">Web</span>
+              <span class="badge badge--category">Mobile</span>
+            </div>
+            <h3>Equine registration platform for tracking racehorses’ welfare</h3>
+            <p>A role-based platform where vets, trainers, farriers, and owners record a racehorse’s health, training, and events — bringing transparency to horse care with detailed profiles, media uploads, a scheduling calendar, comments, and expense tracking.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=dotnet"    alt="ASP.NET Core"      loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=aws"       alt="AWS Lambda"        loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=azure"     alt="Azure"             loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=redux"     alt="React Redux"       loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=ts"        alt="TypeScript"        loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=wordpress" alt="WordPress Bedrock" loading="lazy" />
+              <span class="tech-fallback" title="Azure DevOps CI/CD">ADO</span>
+              <span class="tech-fallback" title="Azure SQL DB Server">ASQL</span>
+              <span class="tech-fallback" title="Azure Storage">AZS</span>
+              <span class="tech-fallback" title="MS SQL Server">MSSQL</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="traveladventure" data-category="web fullstack" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/A Dynamic, User-Friendly Platform, Connecting Travelers to Their Next Adventure/screenshot1.png" alt="Travel booking platform preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2025</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">Web</span>
+            </div>
+            <h3>A Dynamic, User-Friendly Platform, Connecting Travelers to Their Next Adventure</h3>
+            <p>A tour-booking platform with dynamic currency conversion for international pricing, a fast custom search, and smooth CSS image-zoom browsing. Built on WordPress with a PHP/MySQL backend and hosted on WP Engine.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=html"      alt="HTML5"      loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=css"       alt="CSS3"       loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=js"        alt="JavaScript" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=php"       alt="PHP"        loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=wordpress" alt="WordPress"  loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=mysql"     alt="MySQL"      loading="lazy" />
+              <span class="tech-fallback" title="WP Engine">WPE</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="paircraft" data-category="web mobile fullstack" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/PairCraft- Virtual Styling Solution/main-img.png" alt="PairCraft preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2025</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">Mobile</span>
+              <span class="badge badge--category">Web</span>
+            </div>
+            <h3>PairCraft — Virtual Styling Solution</h3>
+            <p>A UK-based virtual-styling e-commerce platform where shoppers mix and match pieces to build outfits that reflect their personal style. Delivered as cross-platform React Native apps for the App Store and Play Store, plus a modern web store.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=react"        alt="React Native" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=androidstudio" alt="Android"      loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=apple"         alt="iOS"          loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=mysql"         alt="MySQL"        loading="lazy" />
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="beautyconcierge" data-category="web mobile fullstack" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/The Beauty Concierge - Ecommerce App For Beauty Products/main-img.png" alt="The Beauty Concierge preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2025</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">Mobile</span>
+              <span class="badge badge--category">Web</span>
+            </div>
+            <h3>The Beauty Concierge — Ecommerce App For Beauty Products</h3>
+            <p>An e-commerce platform for certified, globally-compliant beauty products, delivered as both a React Native app and a React web store. Personalized skincare regimens are generated from custom surveys based on skin type, brand, category, and concern.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=react" alt="React / React Native" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=js"    alt="JavaScript"          loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=mysql" alt="MySQL"               loading="lazy" />
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="taskflow" data-category="web fullstack" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/TaskFlow — Team Collaboration Platform/taskflow-5.jpg" alt="TaskFlow Dashboard preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2024</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">Web</span>
+            </div>
+            <h3>TaskFlow — Team Collaboration Platform</h3>
+            <p>A team productivity platform with Kanban boards, real-time updates, and role-based access. Built with Spring Boot, PostgreSQL, and React for teams of 50–500 users.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=spring"   alt="Spring Boot" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=react"    alt="React"       loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=ts"       alt="TypeScript"  loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=postgres" alt="PostgreSQL"  loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=redis"    alt="Redis"       loading="lazy" />
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="docuchat" data-category="ai fullstack" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/DocuChat — RAG Document Assistant/docuchat-5.jpg" alt="DocuChat preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2025</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">AI/LLM</span>
+            </div>
+            <h3>DocuChat — RAG Document Assistant</h3>
+            <p>An intelligent assistant that answers questions over private document libraries using retrieval-augmented generation. Next.js frontend with a FastAPI + OpenAI backend and vector search.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=nextjs"  alt="Next.js"    loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=ts"      alt="TypeScript" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=python"  alt="Python"     loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=fastapi" alt="FastAPI"    loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=postgres" alt="PostgreSQL" loading="lazy" />
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="summarist" data-category="ai web" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/Summarist — Article Summarizer/summarist-3.jpg" alt="Summarist preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2025</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">AI/LLM</span>
+              <span class="badge badge--category">Web</span>
+            </div>
+            <h3>Summarist — Article Summarizer</h3>
+            <p>A web tool that condenses long-form articles into key takeaways using LLMs, with multi-language output, shareable links, and a personal reading queue.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=nextjs" alt="Next.js"    loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=ts"     alt="TypeScript" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=python" alt="Python"     loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=postgres" alt="PostgreSQL" loading="lazy" />
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="fintrack" data-category="web fullstack">
+          <div class="project-card__media">
+            <img src="./assets/FinTrack — Personal Finance Tracker/fintrack-5.jpg" alt="FinTrack preview" loading="lazy" />
+            <span class="badge badge--year">2023</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">Web</span>
+            </div>
+            <h3>FinTrack — Personal Finance Tracker</h3>
+            <p>A multi-account finance tracker with budget categories, recurring transactions, and monthly insights. Built with React, Node.js, and PostgreSQL.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=react"    alt="React"      loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=nodejs"   alt="Node.js"    loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=ts"       alt="TypeScript" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=postgres" alt="PostgreSQL" loading="lazy" />
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="pulsechat" data-category="web fullstack">
+          <div class="project-card__media">
+            <img src="./assets/PulseChat — Real-Time Messaging/pulsechat-1.gif" alt="PulseChat preview" loading="lazy" />
+            <span class="badge badge--year">2024</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">Web</span>
+            </div>
+            <h3>PulseChat — Real-Time Messaging</h3>
+            <p>A multi-room chat app with typing indicators, presence, and message search. WebSocket-driven with Redis pub/sub for horizontal scaling.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=nextjs" alt="Next.js"    loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=nodejs" alt="Node.js"    loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=ts"     alt="TypeScript" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=redis"  alt="Redis"      loading="lazy" />
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="visiontrack" data-category="ai" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/RetailVision — Footfall &amp; Shelf Analytics/retailvision-1.gif" alt="VisionTrack preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2025</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">AI/LLM</span>
+            </div>
+            <h3>VisionTrack — Real-Time Object Detection</h3>
+            <p>A real-time computer vision pipeline using a YOLO model for object detection and tracking, with a lightweight dashboard for monitoring live streams.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=python"  alt="Python"   loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=fastapi" alt="FastAPI"  loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=nextjs"  alt="Next.js"  loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=ts"      alt="TypeScript" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=docker"  alt="Docker"   loading="lazy" />
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="retailvision" data-category="ai" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/VisionTrack — Real-Time Object Detection/visiontrack-1.gif" alt="RetailVision preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2025</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">AI/LLM</span>
+            </div>
+            <h3>RetailVision — Footfall &amp; Shelf Analytics</h3>
+            <p>A real-time computer vision platform built on a YOLO-family detector for footfall analysis, dwell-time tracking, and shelf-occupancy monitoring across live RTSP camera feeds.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=python"  alt="Python"     loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=fastapi" alt="FastAPI"    loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=nextjs"  alt="Next.js"    loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=ts"      alt="TypeScript" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=docker"  alt="Docker"     loading="lazy" />
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="matchmingle" data-category="mobile" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/MatchMingle — Interest-based Dating/matchmingle-8.jpg" alt="MatchMingle preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2024</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">Mobile</span>
+            </div>
+            <h3>MatchMingle — Interest-based Dating</h3>
+            <p>A mobile dating app that matches users by shared hobbies and activities rather than profile photos alone, with conversation prompts and group meetup suggestions baked into the chat.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=react"    alt="React Native" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=ts"       alt="TypeScript"   loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=nodejs"   alt="Node.js"      loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=postgres" alt="PostgreSQL"   loading="lazy" />
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-project-id="streakly" data-category="mobile" data-featured="true">
+          <div class="project-card__media">
+            <img src="./assets/Streakly — Habit Challenge Companion/streakly-1.jpg" alt="Streakly preview" loading="lazy" />
+            <span class="badge badge--featured">Featured</span>
+            <span class="badge badge--year">2024</span>
+          </div>
+          <div class="project-card__body">
+            <div class="project-card__categories">
+              <span class="badge badge--category">Mobile</span>
+            </div>
+            <h3>Streakly — Habit Challenge Companion</h3>
+            <p>A mobile habit-tracking app that uses streaks, friend leaderboards, and weekly themed challenges to keep users consistent with personal goals — from workouts to language learning.</p>
+            <div class="project-card__icons">
+              <img src="https://skillicons.dev/icons?i=react"    alt="React Native" loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=ts"       alt="TypeScript"   loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=nodejs"   alt="Node.js"      loading="lazy" />
+              <img src="https://skillicons.dev/icons?i=postgres" alt="PostgreSQL"   loading="lazy" />
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ============ SKILLS ============ -->
+    <section id="skills" class="section">
+      <h2 class="section__title" data-i18n="section.skills">Technical Skills</h2>
+      <div class="grid grid--2">
+
+        <div class="card skill-group">
+          <span class="dot dot--tr"></span>
+          <h3 class="skill-group__title" data-i18n="skills.languages">Programming Languages</h3>
+          <div class="skill-items">
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=java"  alt="" loading="lazy"/><span>Java 8/11/17</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=js"    alt="" loading="lazy"/><span>JavaScript (ES6+)</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=ts"    alt="" loading="lazy"/><span>TypeScript</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=mysql" alt="" loading="lazy"/><span>SQL</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=python" alt="" loading="lazy"/><span>Python</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=cs"     alt="" loading="lazy"/><span>C#</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=php"    alt="" loading="lazy"/><span>PHP</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=swift"  alt="" loading="lazy"/><span>Swift</span></div>
+          </div>
+        </div>
+
+        <div class="card skill-group">
+          <span class="dot dot--tr"></span>
+          <h3 class="skill-group__title" data-i18n="skills.backend">Backend Technologies</h3>
+          <div class="skill-items">
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=spring"    alt="" loading="lazy"/><span>Spring Boot</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=spring"    alt="" loading="lazy"/><span>Spring MVC</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=spring"    alt="" loading="lazy"/><span>Spring Data JPA</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=spring"    alt="" loading="lazy"/><span>Spring Security</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=hibernate" alt="" loading="lazy"/><span>Hibernate</span></div>
+            <div class="skill-item"><div class="skill-fallback">REST</div><span>RESTful APIs</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=graphql"   alt="" loading="lazy"/><span>GraphQL</span></div>
+            <div class="skill-item"><div class="skill-fallback">μS</div><span>Microservices</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=nodejs"    alt="" loading="lazy"/><span>Node.js</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=express"   alt="" loading="lazy"/><span>Express</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=fastapi"   alt="" loading="lazy"/><span>FastAPI</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=dotnet"    alt="" loading="lazy"/><span>ASP.NET Core</span></div>
+            <div class="skill-item"><div class="skill-fallback">Solr</div><span>Apache Solr</span></div>
+          </div>
+        </div>
+
+        <div class="card skill-group">
+          <span class="dot dot--tr"></span>
+          <h3 class="skill-group__title" data-i18n="skills.databases">Databases &amp; Caching</h3>
+          <div class="skill-items">
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=postgres" alt="" loading="lazy"/><span>PostgreSQL</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=redis"    alt="" loading="lazy"/><span>Redis</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=mongodb"  alt="" loading="lazy"/><span>MongoDB</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=mysql"    alt="" loading="lazy"/><span>MySQL</span></div>
+            <div class="skill-item"><div class="skill-fallback">MSSQL</div><span>MS SQL Server</span></div>
+          </div>
+        </div>
+
+        <div class="card skill-group">
+          <span class="dot dot--tr"></span>
+          <h3 class="skill-group__title" data-i18n="skills.frontend">Frontend Technologies</h3>
+          <div class="skill-items">
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=react" alt="" loading="lazy"/><span>React.js</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=redux" alt="" loading="lazy"/><span>Redux</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=react" alt="" loading="lazy"/><span>React Router</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=html"  alt="" loading="lazy"/><span>HTML5</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=css"   alt="" loading="lazy"/><span>CSS3</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=nextjs"  alt="" loading="lazy"/><span>Next.js</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=angular" alt="" loading="lazy"/><span>Angular</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=wordpress" alt="" loading="lazy"/><span>WordPress</span></div>
+          </div>
+        </div>
+
+        <div class="card skill-group">
+          <span class="dot dot--tr"></span>
+          <h3 class="skill-group__title" data-i18n="skills.devops">DevOps &amp; Cloud</h3>
+          <div class="skill-items">
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=aws"            alt="" loading="lazy"/><span>AWS</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=docker"         alt="" loading="lazy"/><span>Docker</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=jenkins"        alt="" loading="lazy"/><span>Jenkins</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=githubactions" alt="" loading="lazy"/><span>GitHub Actions</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=azure"  alt="" loading="lazy"/><span>Azure</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=gcp"    alt="" loading="lazy"/><span>GCP</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=vercel" alt="" loading="lazy"/><span>Vercel</span></div>
+            <div class="skill-item"><div class="skill-fallback">ADO</div><span>Azure DevOps</span></div>
+            <div class="skill-item"><div class="skill-fallback">WPE</div><span>WP Engine</span></div>
+            <div class="skill-item"><div class="skill-fallback">AEP</div><span>Adobe Experience Platform</span></div>
+          </div>
+        </div>
+
+        <div class="card skill-group">
+          <span class="dot dot--tr"></span>
+          <h3 class="skill-group__title" data-i18n="skills.testing">Testing &amp; Tools</h3>
+          <div class="skill-items">
+            <div class="skill-item"><div class="skill-fallback">J5</div><span>JUnit 5</span></div>
+            <div class="skill-item"><div class="skill-fallback">MK</div><span>Mockito</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=git"     alt="" loading="lazy"/><span>Git</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=maven"   alt="" loading="lazy"/><span>Maven</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=gradle"  alt="" loading="lazy"/><span>Gradle</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=idea"    alt="" loading="lazy"/><span>IntelliJ IDEA</span></div>
+            <div class="skill-item"><div class="skill-fallback">SQ</div><span>SonarQube</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=postman" alt="" loading="lazy"/><span>Postman</span></div>
+          </div>
+        </div>
+
+        <div class="card skill-group">
+          <span class="dot dot--tr"></span>
+          <h3 class="skill-group__title">Mobile</h3>
+          <div class="skill-items">
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=react"        alt="" loading="lazy"/><span>React Native</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=androidstudio" alt="" loading="lazy"/><span>Android</span></div>
+            <div class="skill-item"><img src="https://skillicons.dev/icons?i=apple"         alt="" loading="lazy"/><span>iOS</span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="footer__grid">
+      <div>
+        <h4>Joao vitor alencar silva</h4>
+        <p class="muted" data-i18n="footer.tagline">Full-Stack Developer with a passion for creating innovative, scalable, and high-performance solutions.</p>
+      </div>
+      <div>
+        <h4 data-i18n="footer.linksTitle">Links</h4>
+        <ul class="footer__links">
+          <li><a href="#home" data-i18n="footer.about">About</a></li>
+          <li><a href="#experience" data-i18n="footer.experience">Experience</a></li>
+          <li><a href="#projects" data-i18n="footer.projects">Projects</a></li>
+          <li><a href="#skills" data-i18n="footer.skills">Skills</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span class="muted">&copy; <span id="year"></span> Joao vitor alencar silva. <span data-i18n="footer.rights">All rights reserved.</span></span>
+    </div>
+  </footer>
+
+  <!-- ============ PROJECT DETAIL MODAL ============ -->
+  <div class="modal" id="projectModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal__backdrop" data-modal-close></div>
+    <div class="modal__panel" role="document">
+
+      <button class="modal__close" data-modal-close type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
+      <div class="modal__gallery">
+        <div class="modal__counter"><span id="modalImageIdx">0</span> <span class="muted">/</span> <span id="modalImageTotal">0</span></div>
+
+        <button class="modal__nav modal__nav--prev" id="modalPrev" type="button" aria-label="Previous image">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+
+        <div class="modal__image-area" id="modalImageArea"></div>
+
+        <button class="modal__nav modal__nav--next" id="modalNext" type="button" aria-label="Next image">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+
+        <div class="modal__thumbs" id="modalThumbs"></div>
+      </div>
+
+      <div class="modal__content">
+        <div class="modal__header">
+          <div class="modal__badges">
+            <span class="badge badge--category modal__category" id="modalCategory"></span>
+            <span class="badge modal__featured" id="modalFeatured" hidden>Featured</span>
+          </div>
+          <span class="modal__year" id="modalYear"></span>
+        </div>
+        <h3 id="modalTitle"></h3>
+        <p class="modal__lead" id="modalDescription"></p>
+
+        <div class="modal__problem">
+          <h4>The Problem</h4>
+          <p id="modalProblem"></p>
+        </div>
+
+        <div class="modal__section">
+          <h4>The Approach</h4>
+          <p id="modalApproach"></p>
+        </div>
+
+        <div class="modal__section">
+          <h4>The Result</h4>
+          <ul class="bullets" id="modalResults"></ul>
+        </div>
+
+        <div class="modal__builtwith">
+          <h4>Built With</h4>
+          <div class="modal__icons" id="modalIcons"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js?v=33" defer></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+# Drop screenshots for the travel/tour-booking platform here.
+# Name the primary one main-img.png (used as the card thumbnail).
+# Add more (distinct) images and list their paths in the `images: []`
+# array of the `traveladventure` entry in ../../script.js (PROJECT_DETAILS) for the gallery.

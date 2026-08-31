@@ -1,0 +1,10 @@
+# Editor temp/save artifacts
+*.tmp.*
+
+# Local Claude settings
+.claude/settings.local.json
+.claude/settings.local.json.tmp.*
+
+# OS files
+Thumbs.db
+.DS_Store
