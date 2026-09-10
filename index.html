@@ -9,9 +9,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css" />
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <link rel="stylesheet" href="styles.css?v=17" />
 </head>
 <body>
+
+  <!-- 3D background scene (background.js) - purely decorative -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
   <!-- ============ NAV ============ -->
   <header class="nav">
@@ -722,6 +725,10 @@
     </div>
   </div>
 
+  <script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js" } }
+  </script>
+  <script type="module" src="background.js?v=1"></script>
   <script src="script.js?v=33" defer></script>
 </body>
 </html>
