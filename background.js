@@ -1,33 +1,51 @@
 // =====================================================================
 //  3D BACKGROUND
-//  An ambient three.js scene that sits behind every section: a field of
-//  drifting points threaded with free-floating line segments, spread
-//  evenly across the whole viewport rather than clustered in the middle.
+//  An ambient three.js scene sitting behind every section, in three parts:
 //
-//  It reacts to pointer movement (parallax + tilt), clicks (a travelling
-//  shockwave) and scroll position (rotation + dolly). It keeps rendering
-//  while a project modal is open, so the scene stays behind the overlay.
+//    1. Chains  - short runs of connected bars (4-8 per chain), scattered
+//                 sparsely across the upper part of the view. Each chain
+//                 tumbles as one linked piece, never as loose sticks.
+//    2. Grid    - a wavy wireframe mesh across the bottom, receding toward
+//                 a horizon, which is what gives the page its sense of depth.
+//    3. Dust    - a light scatter of points tying the two together.
 //
-//  Colours are read from the CSS custom properties in styles.css, so the
-//  scene re-tints itself whenever the light/dark toggle flips.
+//  Everything reacts to pointer movement (parallax + tilt), clicks (a
+//  travelling shockwave) and scroll position, and keeps rendering while a
+//  project modal is open so the scene stays alive behind the overlay.
+//
+//  Colours come from the CSS custom properties in styles.css, so the scene
+//  re-tints itself whenever the light/dark toggle flips.
 //  Tweak the feel with CONFIG below.
 // =====================================================================
 
 import * as THREE from 'three';
 
 const CONFIG = {
-  points:        2400,   // glowing dots; scaled down on small screens
-  segments:       320,   // free-floating line segments
-  segmentLen: [4, 11],   // min/max length of a segment
-  spread:  { x: 78, y: 48, zNear: 22, zFar: -38 },  // volume everything fills
-  cameraZ:         62,
-  parallax:         9,   // how far the camera drifts with the pointer
-  tilt:          0.24,   // how far the field leans toward the pointer
-  drift:         0.16,   // idle translation speed
-  tumble:        0.10,   // idle per-segment rotation speed
-  scrollTurn:    0.35,   // radians of rotation across the whole page
-  pulseDuration: 1.15,   // seconds for a click shockwave to travel out
-  pulseReach:      64,   // world units the shockwave ring travels
+  // --- chains of connected bars, kept sparse and high ---
+  chains:         16,        // how many linked runs
+  chainNodes: [5, 9],        // nodes per chain -> 4 to 8 connected bars
+  barLen:     [4, 9],        // length of one bar in a chain
+  topBand:    [2, 42],       // y range the chains live in (upper part of view)
+
+  // --- wireframe mesh across the bottom ---
+  grid: {
+    width: 200, cols: 42,    // side to side
+    zNear: 26, zFar: -95, rows: 30,   // toward the horizon
+    y: -30,                  // height: sits below the content
+    waveAmp: 3.6, waveSpeed: 0.5,
+  },
+
+  dust:          900,        // ambient points
+  spread: { x: 78, y: 48, zNear: 22, zFar: -38 },
+
+  cameraZ:        62,
+  parallax:        9,        // how far the camera drifts with the pointer
+  tilt:         0.20,        // how far the scene leans toward the pointer
+  drift:        0.16,        // idle translation speed
+  tumble:       0.10,        // idle chain rotation speed
+  scrollTurn:   0.25,        // radians of rotation across the whole page
+  pulseDuration: 1.15,       // seconds for a click shockwave to travel out
+  pulseReach:      70,       // world units the shockwave ring travels
 };
 
 const canvas = document.getElementById('bg-canvas');
@@ -49,9 +67,8 @@ function cssColor(name, fallback) {
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
-// Shared GLSL: idle drift plus the click shockwave. Both the point field and
-// the segment field displace themselves the same way, so the whole volume
-// moves as one even though the two are drawn separately.
+// Shared GLSL: idle drift plus the click shockwave, so every layer displaces
+// itself the same way and the scene reads as one volume.
 const COMMON_GLSL = `
   uniform float uTime, uPulse, uPulseRadius, uFadeNear, uFadeFar;
   uniform vec3  uPulseOrigin;
@@ -83,29 +100,24 @@ function init() {
   renderer.setClearAlpha(0);
 
   const scene  = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 240);
+  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 260);
   camera.position.set(0, 0, CONFIG.cameraZ);
 
   const small = window.innerWidth < 760;
-  const nPoints   = small ? Math.round(CONFIG.points * 0.45)  : CONFIG.points;
-  const nSegments = small ? Math.round(CONFIG.segments * 0.5) : CONFIG.segments;
+  const nChains = small ? Math.round(CONFIG.chains * 0.6) : CONFIG.chains;
+  const nDust   = small ? Math.round(CONFIG.dust * 0.5)   : CONFIG.dust;
 
   // Everything lives in this group, so pointer tilt and scroll rotation
   // apply to the whole volume at once and it stays visually coherent.
   const group = new THREE.Group();
   scene.add(group);
 
-  // A point somewhere in the spread volume.
-  function scatter(out) {
-    const s = CONFIG.spread;
-    return out.set(rand(-s.x, s.x), rand(-s.y, s.y), rand(s.zFar, s.zNear));
-  }
+  const chains = buildChains(nChains);
+  const grid   = buildGrid();
+  const dust   = buildDust(nDust);
+  group.add(chains, grid, dust);
 
-  const points   = buildPoints(nPoints);
-  const segments = buildSegments(nSegments);
-  group.add(points, segments);
-
-  // Uniforms shared by both materials, so one write drives the whole scene.
+  // Uniforms shared by every material, so one write drives the whole scene.
   const shared = {
     uTime:        { value: 0 },
     uRotTime:     { value: 0 },
@@ -113,126 +125,71 @@ function init() {
     uPulseRadius: { value: 0 },
     uPulseOrigin: { value: new THREE.Vector3() },
     uFadeNear:    { value: 24 },
-    uFadeFar:     { value: 165 },
+    uFadeFar:     { value: 190 },
   };
-  for (const m of [points.material, segments.material]) Object.assign(m.uniforms, shared);
+  for (const o of [chains, grid, dust]) Object.assign(o.material.uniforms, shared);
 
-  // ---------- point field ----------
-  function buildPoints(n) {
-    const pos   = new Float32Array(n * 3);
-    const scale = new Float32Array(n);
-    const mix   = new Float32Array(n);
-    const seed  = new Float32Array(n);
-    const p = new THREE.Vector3();
+  // ---------- chains of connected bars ----------
+  // A chain is a short random walk. Every vertex in it carries the SAME
+  // centre, axis and seed, so the whole run drifts and tumbles as one linked
+  // piece — the bars stay joined end to end instead of floating apart.
+  function buildChains(n) {
+    const offset = [], centre = [], axis = [], seed = [], taper = [];
 
-    for (let i = 0; i < n; i++) {
-      scatter(p);
-      pos[i * 3] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z;
-      scale[i] = rand(0.5, 1.9);
-      mix[i]   = Math.random();
-      seed[i]  = Math.random();
-    }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('aScale',   new THREE.BufferAttribute(scale, 1));
-    geo.setAttribute('aMix',     new THREE.BufferAttribute(mix, 1));
-    geo.setAttribute('aSeed',    new THREE.BufferAttribute(seed, 1));
-
-    const mat = new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      uniforms: {
-        uSize:       { value: 2.6 },
-        uPixelRatio: { value: 1 },
-        uOpacity:    { value: 1 },
-        uColorA:     { value: new THREE.Color('#14e0c4') },
-        uColorB:     { value: new THREE.Color('#b86bff') },
-      },
-      vertexShader: `
-        ${COMMON_GLSL}
-        uniform float uSize, uPixelRatio;
-        uniform vec3  uColorA, uColorB;
-        attribute float aScale, aMix, aSeed;
-        varying vec3  vColor;
-        varying float vAlpha;
-
-        void main() {
-          vec3 pos = drift(position, aSeed, ${CONFIG.drift});
-          float ring = shock(pos);
-
-          vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-          gl_Position  = projectionMatrix * mv;
-          gl_PointSize = uSize * aScale * uPixelRatio * (60.0 / max(-mv.z, 1.0));
-
-          vColor  = mix(uColorA, uColorB, aMix) + ring * uPulse * 0.9;
-          vAlpha  = smoothstep(uFadeFar, uFadeNear, -mv.z);
-          vAlpha *= 0.62 + 0.38 * sin(uTime * 0.9 + aSeed * 20.0);
-        }
-      `,
-      fragmentShader: `
-        uniform float uOpacity;
-        varying vec3  vColor;
-        varying float vAlpha;
-        void main() {
-          float d = length(gl_PointCoord - vec2(0.5));
-          if (d > 0.5) discard;                        // soft round sprite
-          float glow = pow(smoothstep(0.5, 0.0, d), 2.4);
-          gl_FragColor = vec4(vColor, glow * vAlpha * uOpacity);
-        }
-      `,
-    });
-
-    return new THREE.Points(geo, mat);
-  }
-
-  // ---------- free-floating line segments ----------
-  // Two vertices per segment. Each vertex carries its own segment centre,
-  // spin axis and seed, so the shader can tumble every strut about its own
-  // midpoint. They float independently instead of forming one rigid shape.
-  function buildSegments(n) {
-    const offset = new Float32Array(n * 2 * 3);   // endpoint, relative to centre
-    const centre = new Float32Array(n * 2 * 3);
-    const axis   = new Float32Array(n * 2 * 3);
-    const seed   = new Float32Array(n * 2);
-    const taper  = new Float32Array(n * 2);       // fades each strut along its length
-
-    const c = new THREE.Vector3();
-    const a = new THREE.Vector3();
-    const d = new THREE.Vector3();
+    const c    = new THREE.Vector3();
+    const walk = new THREE.Vector3();
+    const step = new THREE.Vector3();
+    const mid  = new THREE.Vector3();
 
     for (let i = 0; i < n; i++) {
-      scatter(c);
+      const s = CONFIG.spread;
+      c.set(rand(-s.x, s.x), rand(CONFIG.topBand[0], CONFIG.topBand[1]), rand(s.zFar, s.zNear));
 
-      // random direction on the unit sphere, scaled to half the strut length
-      const th = rand(0, Math.PI * 2), ph = Math.acos(rand(-1, 1));
-      d.set(Math.sin(ph) * Math.cos(th), Math.sin(ph) * Math.sin(th), Math.cos(ph));
-      d.multiplyScalar(rand(CONFIG.segmentLen[0], CONFIG.segmentLen[1]) * 0.5);
+      const ax = new THREE.Vector3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize();
+      const sd = Math.random();
+      const count = Math.round(rand(CONFIG.chainNodes[0], CONFIG.chainNodes[1]));
 
-      a.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize();   // spin axis
-      const s = Math.random();
+      // random walk -> a run of joined nodes
+      const nodes = [];
+      walk.set(0, 0, 0);
+      for (let k = 0; k < count; k++) {
+        nodes.push(walk.clone());
+        step.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize()
+            .multiplyScalar(rand(CONFIG.barLen[0], CONFIG.barLen[1]));
+        walk.add(step);
+      }
 
-      for (let v = 0; v < 2; v++) {
-        const k = (i * 2 + v) * 3;
-        const sign = v === 0 ? -1 : 1;
-        offset[k] = d.x * sign; offset[k + 1] = d.y * sign; offset[k + 2] = d.z * sign;
-        centre[k] = c.x;        centre[k + 1] = c.y;        centre[k + 2] = c.z;
-        axis[k]   = a.x;        axis[k + 1]   = a.y;        axis[k + 2]   = a.z;
-        seed[i * 2 + v]  = s;
-        taper[i * 2 + v] = v === 0 ? 0.25 : 1.0;
+      // re-centre the walk on its own centroid so it spins about itself
+      mid.set(0, 0, 0);
+      for (const p of nodes) mid.add(p);
+      mid.divideScalar(nodes.length);
+      for (const p of nodes) p.sub(mid);
+
+      // brightness ramps along the chain; shared node values keep it seamless
+      const at = k => 0.4 + 0.6 * (k / (count - 1));
+
+      for (let k = 0; k < count - 1; k++) {
+        for (const [p, idx] of [[nodes[k], k], [nodes[k + 1], k + 1]]) {
+          offset.push(p.x, p.y, p.z);
+          centre.push(c.x, c.y, c.z);
+          axis.push(ax.x, ax.y, ax.z);
+          seed.push(sd);
+          taper.push(at(idx));
+        }
       }
     }
 
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(offset, 3));
-    geo.setAttribute('aCentre',  new THREE.BufferAttribute(centre, 3));
-    geo.setAttribute('aAxis',    new THREE.BufferAttribute(axis, 3));
-    geo.setAttribute('aSeed',    new THREE.BufferAttribute(seed, 1));
-    geo.setAttribute('aTaper',   new THREE.BufferAttribute(taper, 1));
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(offset, 3));
+    geo.setAttribute('aCentre',  new THREE.Float32BufferAttribute(centre, 3));
+    geo.setAttribute('aAxis',    new THREE.Float32BufferAttribute(axis, 3));
+    geo.setAttribute('aSeed',    new THREE.Float32BufferAttribute(seed, 1));
+    geo.setAttribute('aTaper',   new THREE.Float32BufferAttribute(taper, 1));
 
     const mat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       uniforms: {
-        uOpacity: { value: 0.8 },
+        uOpacity: { value: 0.85 },
         uColorA:  { value: new THREE.Color('#14e0c4') },
         uColorB:  { value: new THREE.Color('#b86bff') },
       },
@@ -277,6 +234,152 @@ function init() {
     return new THREE.LineSegments(geo, mat);
   }
 
+  // ---------- wireframe mesh across the bottom ----------
+  // A flat lattice laid in the XZ plane and pushed below the content. Running
+  // it away from the camera to a horizon is what sells the depth; a rolling
+  // sine wave in the vertex shader keeps it alive.
+  function buildGrid() {
+    const g = CONFIG.grid;
+    const halfW = g.width / 2;
+    const pos = [], fade = [], mixv = [];
+
+    const xAt = i => -halfW + (g.width * i) / g.cols;
+    const zAt = j => g.zNear - ((g.zNear - g.zFar) * j) / g.rows;
+
+    // y is baked in rather than set via object position, so the shockwave
+    // (which works in group space) lines up with the rest of the scene.
+    const push = (x, z) => {
+      pos.push(x, g.y, z);
+      const near = 1 - (g.zNear - z) / (g.zNear - g.zFar);   // 1 near .. 0 far
+      const edge = 1 - Math.min(Math.abs(x) / halfW, 1);
+      fade.push(Math.pow(Math.max(near, 0), 0.85) * Math.pow(edge, 0.5));
+      mixv.push((x / halfW + 1) * 0.5);
+    };
+
+    for (let j = 0; j <= g.rows; j++)          // lines running side to side
+      for (let i = 0; i < g.cols; i++) { push(xAt(i), zAt(j)); push(xAt(i + 1), zAt(j)); }
+
+    for (let i = 0; i <= g.cols; i++)          // lines running into the distance
+      for (let j = 0; j < g.rows; j++) { push(xAt(i), zAt(j)); push(xAt(i), zAt(j + 1)); }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('aFade',    new THREE.Float32BufferAttribute(fade, 1));
+    geo.setAttribute('aMix',     new THREE.Float32BufferAttribute(mixv, 1));
+
+    const mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: {
+        uOpacity:   { value: 0.62 },
+        uWaveAmp:   { value: g.waveAmp },
+        uWaveSpeed: { value: g.waveSpeed },
+        uColorA:    { value: new THREE.Color('#14e0c4') },
+        uColorB:    { value: new THREE.Color('#b86bff') },
+      },
+      vertexShader: `
+        ${COMMON_GLSL}
+        uniform float uWaveAmp, uWaveSpeed;
+        uniform vec3  uColorA, uColorB;
+        attribute float aFade, aMix;
+        varying vec3  vColor;
+        varying float vAlpha;
+
+        void main() {
+          vec3 p = position;
+
+          // two crossing waves so the surface rolls rather than pulses
+          p.y += sin(p.x * 0.075 + uTime * uWaveSpeed)
+               * cos(p.z * 0.095 + uTime * uWaveSpeed * 0.8) * uWaveAmp;
+
+          float ring = shock(p);
+
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          gl_Position = projectionMatrix * mv;
+
+          vColor = mix(uColorA, uColorB, aMix) + ring * uPulse * 1.1;
+          vAlpha = smoothstep(uFadeFar, uFadeNear, -mv.z) * aFade;
+        }
+      `,
+      fragmentShader: `
+        uniform float uOpacity;
+        varying vec3  vColor;
+        varying float vAlpha;
+        void main() { gl_FragColor = vec4(vColor, vAlpha * uOpacity); }
+      `,
+    });
+
+    return new THREE.LineSegments(geo, mat);
+  }
+
+  // ---------- ambient dust ----------
+  function buildDust(n) {
+    const pos   = new Float32Array(n * 3);
+    const scale = new Float32Array(n);
+    const mix   = new Float32Array(n);
+    const seed  = new Float32Array(n);
+    const s = CONFIG.spread;
+
+    for (let i = 0; i < n; i++) {
+      pos[i * 3]     = rand(-s.x, s.x);
+      pos[i * 3 + 1] = rand(-s.y, s.y);
+      pos[i * 3 + 2] = rand(s.zFar, s.zNear);
+      scale[i] = rand(0.5, 1.8);
+      mix[i]   = Math.random();
+      seed[i]  = Math.random();
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('aScale',   new THREE.BufferAttribute(scale, 1));
+    geo.setAttribute('aMix',     new THREE.BufferAttribute(mix, 1));
+    geo.setAttribute('aSeed',    new THREE.BufferAttribute(seed, 1));
+
+    const mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: {
+        uSize:       { value: 2.5 },
+        uPixelRatio: { value: 1 },
+        uOpacity:    { value: 0.9 },
+        uColorA:     { value: new THREE.Color('#14e0c4') },
+        uColorB:     { value: new THREE.Color('#b86bff') },
+      },
+      vertexShader: `
+        ${COMMON_GLSL}
+        uniform float uSize, uPixelRatio;
+        uniform vec3  uColorA, uColorB;
+        attribute float aScale, aMix, aSeed;
+        varying vec3  vColor;
+        varying float vAlpha;
+
+        void main() {
+          vec3 pos = drift(position, aSeed, ${CONFIG.drift});
+          float ring = shock(pos);
+
+          vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+          gl_Position  = projectionMatrix * mv;
+          gl_PointSize = uSize * aScale * uPixelRatio * (60.0 / max(-mv.z, 1.0));
+
+          vColor  = mix(uColorA, uColorB, aMix) + ring * uPulse * 0.9;
+          vAlpha  = smoothstep(uFadeFar, uFadeNear, -mv.z);
+          vAlpha *= 0.62 + 0.38 * sin(uTime * 0.9 + aSeed * 20.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uOpacity;
+        varying vec3  vColor;
+        varying float vAlpha;
+        void main() {
+          float d = length(gl_PointCoord - vec2(0.5));
+          if (d > 0.5) discard;                        // soft round sprite
+          float glow = pow(smoothstep(0.5, 0.0, d), 2.4);
+          gl_FragColor = vec4(vColor, glow * vAlpha * uOpacity);
+        }
+      `,
+    });
+
+    return new THREE.Points(geo, mat);
+  }
+
   // ---------- theme ----------
   function applyTheme() {
     const light = isLight();
@@ -288,7 +391,8 @@ function init() {
     const blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
     const ink = c => (light ? c.clone().multiplyScalar(0.62) : c);
 
-    for (const [m, base] of [[points.material, 1], [segments.material, 0.8]]) {
+    for (const [o, base] of [[chains, 0.85], [grid, 0.62], [dust, 0.9]]) {
+      const m = o.material;
       m.uniforms.uColorA.value.copy(ink(a));
       m.uniforms.uColorB.value.copy(ink(b));
       m.uniforms.uOpacity.value = base * (light ? 0.8 : 1);
@@ -310,7 +414,7 @@ function init() {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    points.material.uniforms.uPixelRatio.value = dpr;
+    dust.material.uniforms.uPixelRatio.value = dpr;
   }
   resize();
   window.addEventListener('resize', resize);
@@ -320,7 +424,7 @@ function init() {
   const eased   = { x: 0, y: 0 };
   let pulseT    = -1;                         // seconds into a shockwave, -1 = idle
   let spinKick  = 0;                          // extra tumble imparted by a click
-  let rotTime   = 0;                          // drives per-segment rotation
+  let rotTime   = 0;                          // drives chain rotation
   let scrollN   = 0;                          // 0..1 down the page
   const pulseOrigin = new THREE.Vector3();
 
@@ -373,9 +477,8 @@ function init() {
   function frame() {
     requestAnimationFrame(frame);
 
-    // Note: deliberately no modal check here. The canvas has no preserved
-    // drawing buffer, so skipping a render blanks it. The scene has to keep
-    // drawing to stay visible behind the project detail overlay.
+    // Note: deliberately no modal check here. The scene keeps drawing so it
+    // stays alive behind the project detail overlay.
     if (document.hidden) { clock.getDelta(); return; }
 
     const dt = Math.min(clock.getDelta(), 0.05);
@@ -393,7 +496,7 @@ function init() {
     spinKick *= Math.pow(0.15, dt);
     rotTime += (1 + spinKick) * dt;
 
-    // whole field leans toward the pointer and turns gently as the page scrolls
+    // whole scene leans toward the pointer and turns gently as the page scrolls
     group.rotation.x += (eased.y * CONFIG.tilt - group.rotation.x) * Math.min(dt * 2, 1);
     group.rotation.y += (eased.x * CONFIG.tilt + scrollN * CONFIG.scrollTurn - group.rotation.y) * Math.min(dt * 2, 1);
 
