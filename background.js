@@ -2,11 +2,10 @@
 //  3D BACKGROUND
 //  An ambient three.js scene sitting behind every section, in three parts:
 //
-//    1. Chains  - short runs of connected bars (4-8 per chain), scattered
-//                 sparsely across the upper part of the view. Each chain
-//                 tumbles as one linked piece, never as loose sticks.
-//    2. Grid    - a wavy wireframe mesh across the bottom, receding toward
-//                 a horizon, which is what gives the page its sense of depth.
+//    1. Meteors - luminous shooting stars that fall from above and streak
+//                 down into the mesh, arriving a few at a time.
+//    2. Mesh    - a wavy wireframe net across the bottom, receding toward a
+//                 horizon, which is what gives the page its sense of depth.
 //    3. Dust    - a light scatter of points tying the two together.
 //
 //  Everything reacts to pointer movement (parallax + tilt), clicks (a
@@ -21,11 +20,16 @@
 import * as THREE from 'three';
 
 const CONFIG = {
-  // --- chains of connected bars, kept sparse and high ---
-  chains:         16,        // how many linked runs
-  chainNodes: [5, 9],        // nodes per chain -> 4 to 8 connected bars
-  barLen:     [4, 9],        // length of one bar in a chain
-  topBand:    [2, 42],       // y range the chains live in (upper part of view)
+  // --- shooting stars falling into the mesh ---
+  meteors: {
+    count:        28,
+    yTop:         48,        // where they enter, well above the content
+    tail:    [7, 20],        // streak length
+    rate: [0.05, 0.13],      // falls per second -> one every 8-20s each
+    activeFrac:  0.2,        // fraction of that cycle spent falling
+    drift:      0.30,        // sideways lean per unit fallen
+    headSize:     9,
+  },
 
   // --- wireframe mesh across the bottom ---
   grid: {
@@ -42,7 +46,6 @@ const CONFIG = {
   parallax:        9,        // how far the camera drifts with the pointer
   tilt:         0.20,        // how far the scene leans toward the pointer
   drift:        0.16,        // idle translation speed
-  tumble:       0.10,        // idle chain rotation speed
   scrollTurn:   0.25,        // radians of rotation across the whole page
   pulseDuration: 1.15,       // seconds for a click shockwave to travel out
   pulseReach:      70,       // world units the shockwave ring travels
@@ -68,7 +71,8 @@ function cssColor(name, fallback) {
 const rand = (a, b) => a + Math.random() * (b - a);
 
 // Shared GLSL: idle drift plus the click shockwave, so every layer displaces
-// itself the same way and the scene reads as one volume.
+// itself the same way and the scene reads as one volume. Declares uTime,
+// uPulse* and uFade*, which the meteor chunk below relies on.
 const COMMON_GLSL = `
   uniform float uTime, uPulse, uPulseRadius, uFadeNear, uFadeFar;
   uniform vec3  uPulseOrigin;
@@ -84,6 +88,38 @@ const COMMON_GLSL = `
     float ring = exp(-pow((d - uPulseRadius) * 0.14, 2.0));
     p += normalize(p - uPulseOrigin + 0.0001) * ring * uPulse * 7.0;
     return ring;
+  }
+`;
+
+// Meteor motion, shared by the trail streaks and the glowing heads so the two
+// stay locked together. Entirely time-driven, so the CPU never touches them.
+const METEOR_GLSL = `
+  uniform float uActiveFrac, uYTop, uYFloor;
+  attribute vec3  aSpawn;
+  attribute vec2  aDrift;
+  attribute float aRate, aStagger, aTail, aHue;
+
+  // Each meteor only falls for uActiveFrac of its cycle and waits out the
+  // rest, so the sky stays mostly empty and streaks arrive a few at a time.
+  float meteorQ(out float alive) {
+    float cycle = fract(uTime * aRate + aStagger);
+    alive = step(cycle, uActiveFrac);
+    return clamp(cycle / uActiveFrac, 0.0, 1.0);
+  }
+
+  vec3 meteorDir() { return normalize(vec3(aDrift.x, -1.0, aDrift.y)); }
+
+  // Head position at progress q: falls from uYTop down to the mesh, leaning
+  // sideways as it goes.
+  vec3 meteorHead(float q) {
+    float y = mix(uYTop, uYFloor, q);
+    float fallen = uYTop - y;
+    return vec3(aSpawn.x + aDrift.x * fallen, y, aSpawn.z + aDrift.y * fallen);
+  }
+
+  // Bright on arrival, snuffed out as it enters the net.
+  float meteorFade(float q) {
+    return smoothstep(0.0, 0.06, q) * smoothstep(1.0, 0.86, q);
   }
 `;
 
@@ -104,123 +140,114 @@ function init() {
   camera.position.set(0, 0, CONFIG.cameraZ);
 
   const small = window.innerWidth < 760;
-  const nChains = small ? Math.round(CONFIG.chains * 0.6) : CONFIG.chains;
-  const nDust   = small ? Math.round(CONFIG.dust * 0.5)   : CONFIG.dust;
+  const nMeteors = small ? Math.round(CONFIG.meteors.count * 0.6) : CONFIG.meteors.count;
+  const nDust    = small ? Math.round(CONFIG.dust * 0.5)          : CONFIG.dust;
 
   // Everything lives in this group, so pointer tilt and scroll rotation
   // apply to the whole volume at once and it stays visually coherent.
   const group = new THREE.Group();
   scene.add(group);
 
-  const chains = buildChains(nChains);
-  const grid   = buildGrid();
-  const dust   = buildDust(nDust);
-  group.add(chains, grid, dust);
+  const { trails, heads } = buildMeteors(nMeteors);
+  const grid = buildGrid();
+  const dust = buildDust(nDust);
+  group.add(grid, trails, heads, dust);
+
+  const layers = [grid, trails, heads, dust];
 
   // Uniforms shared by every material, so one write drives the whole scene.
   const shared = {
     uTime:        { value: 0 },
-    uRotTime:     { value: 0 },
     uPulse:       { value: 0 },
     uPulseRadius: { value: 0 },
     uPulseOrigin: { value: new THREE.Vector3() },
     uFadeNear:    { value: 24 },
     uFadeFar:     { value: 190 },
   };
-  for (const o of [chains, grid, dust]) Object.assign(o.material.uniforms, shared);
+  for (const o of layers) Object.assign(o.material.uniforms, shared);
 
-  // ---------- chains of connected bars ----------
-  // A chain is a short random walk. Every vertex in it carries the SAME
-  // centre, axis and seed, so the whole run drifts and tumbles as one linked
-  // piece — the bars stay joined end to end instead of floating apart.
-  function buildChains(n) {
-    const offset = [], centre = [], axis = [], seed = [], taper = [];
-
-    const c    = new THREE.Vector3();
-    const walk = new THREE.Vector3();
-    const step = new THREE.Vector3();
-    const mid  = new THREE.Vector3();
+  // ---------- shooting stars ----------
+  // One entry per meteor, shared between a 2-vertex trail and a 1-vertex head.
+  // Positions are computed in the shader, so both objects opt out of frustum
+  // culling — their buffer positions are only placeholders.
+  function buildMeteors(n) {
+    const M = CONFIG.meteors;
+    // Two vertex buffers: the trail (2 verts per meteor) and the head (1).
+    const T = { pos: [], spawn: [], drift: [], rate: [], stagger: [], tail: [], hue: [], end: [] };
+    const H = { pos: [], spawn: [], drift: [], rate: [], stagger: [], tail: [], hue: [] };
 
     for (let i = 0; i < n; i++) {
       const s = CONFIG.spread;
-      c.set(rand(-s.x, s.x), rand(CONFIG.topBand[0], CONFIG.topBand[1]), rand(s.zFar, s.zNear));
+      const sx = rand(-s.x, s.x), sz = rand(s.zFar, s.zNear);
+      const dx = rand(-M.drift, M.drift), dz = rand(-M.drift, M.drift) * 0.5;
+      const rt = rand(M.rate[0], M.rate[1]);
+      const st = Math.random();
+      const tl = rand(M.tail[0], M.tail[1]);
+      const hu = Math.random();
 
-      const ax = new THREE.Vector3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize();
-      const sd = Math.random();
-      const count = Math.round(rand(CONFIG.chainNodes[0], CONFIG.chainNodes[1]));
+      // every vertex of one meteor gets identical parameters, so the trail
+      // and its head resolve to exactly the same position each frame
+      const put = o => {
+        o.pos.push(sx, M.yTop, sz);            // placeholder; shader positions it
+        o.spawn.push(sx, M.yTop, sz);
+        o.drift.push(dx, dz);
+        o.rate.push(rt); o.stagger.push(st); o.tail.push(tl); o.hue.push(hu);
+      };
 
-      // random walk -> a run of joined nodes
-      const nodes = [];
-      walk.set(0, 0, 0);
-      for (let k = 0; k < count; k++) {
-        nodes.push(walk.clone());
-        step.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize()
-            .multiplyScalar(rand(CONFIG.barLen[0], CONFIG.barLen[1]));
-        walk.add(step);
-      }
-
-      // re-centre the walk on its own centroid so it spins about itself
-      mid.set(0, 0, 0);
-      for (const p of nodes) mid.add(p);
-      mid.divideScalar(nodes.length);
-      for (const p of nodes) p.sub(mid);
-
-      // brightness ramps along the chain; shared node values keep it seamless
-      const at = k => 0.4 + 0.6 * (k / (count - 1));
-
-      for (let k = 0; k < count - 1; k++) {
-        for (const [p, idx] of [[nodes[k], k], [nodes[k + 1], k + 1]]) {
-          offset.push(p.x, p.y, p.z);
-          centre.push(c.x, c.y, c.z);
-          axis.push(ax.x, ax.y, ax.z);
-          seed.push(sd);
-          taper.push(at(idx));
-        }
-      }
+      put(T); T.end.push(0);                   // trail: tail vertex
+      put(T); T.end.push(1);                   // trail: head vertex
+      put(H);                                  // glowing head
     }
 
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(offset, 3));
-    geo.setAttribute('aCentre',  new THREE.Float32BufferAttribute(centre, 3));
-    geo.setAttribute('aAxis',    new THREE.Float32BufferAttribute(axis, 3));
-    geo.setAttribute('aSeed',    new THREE.Float32BufferAttribute(seed, 1));
-    geo.setAttribute('aTaper',   new THREE.Float32BufferAttribute(taper, 1));
+    function geom(src, extra = []) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(src.pos, 3));
+      g.setAttribute('aSpawn',   new THREE.Float32BufferAttribute(src.spawn, 3));
+      g.setAttribute('aDrift',   new THREE.Float32BufferAttribute(src.drift, 2));
+      g.setAttribute('aRate',    new THREE.Float32BufferAttribute(src.rate, 1));
+      g.setAttribute('aStagger', new THREE.Float32BufferAttribute(src.stagger, 1));
+      g.setAttribute('aTail',    new THREE.Float32BufferAttribute(src.tail, 1));
+      g.setAttribute('aHue',     new THREE.Float32BufferAttribute(src.hue, 1));
+      for (const [name, data, size] of extra) {
+        g.setAttribute(name, new THREE.Float32BufferAttribute(data, size));
+      }
+      return g;
+    }
 
-    const mat = new THREE.ShaderMaterial({
+    const trailGeo = geom(T, [['aEnd', T.end, 1]]);
+    const headGeo  = geom(H);
+
+    const common = {
+      uActiveFrac: { value: M.activeFrac },
+      uYTop:       { value: M.yTop },
+      uYFloor:     { value: CONFIG.grid.y + 1 },
+      uColorA:     { value: new THREE.Color('#14e0c4') },
+      uColorB:     { value: new THREE.Color('#b86bff') },
+    };
+
+    const trailMat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      uniforms: {
-        uOpacity: { value: 0.85 },
-        uColorA:  { value: new THREE.Color('#14e0c4') },
-        uColorB:  { value: new THREE.Color('#b86bff') },
-      },
+      uniforms: { ...common, uOpacity: { value: 0.95 } },
       vertexShader: `
         ${COMMON_GLSL}
-        uniform float uRotTime;
-        uniform vec3  uColorA, uColorB;
-        attribute vec3  aCentre, aAxis;
-        attribute float aSeed, aTaper;
+        ${METEOR_GLSL}
+        uniform vec3 uColorA, uColorB;
+        attribute float aEnd;
         varying vec3  vColor;
         varying float vAlpha;
 
-        // Rodrigues rotation about an arbitrary axis.
-        vec3 spin(vec3 v, vec3 ax, float ang) {
-          float c = cos(ang), s = sin(ang);
-          return v * c + cross(ax, v) * s + ax * dot(ax, v) * (1.0 - c);
-        }
-
         void main() {
-          vec3 c = drift(aCentre, aSeed, ${CONFIG.drift});
-          float ring = shock(c);
+          float alive;
+          float q = meteorQ(alive);
+          // tail trails behind the head, along the direction of travel
+          vec3 pos = meteorHead(q) - meteorDir() * aTail * (1.0 - aEnd);
 
-          float ang = uRotTime * (0.35 + aSeed * 1.3) * ${CONFIG.tumble};
-          vec3 off  = spin(position, normalize(aAxis), ang);
-
-          vec4 mv = modelViewMatrix * vec4(c + off, 1.0);
+          vec4 mv = modelViewMatrix * vec4(pos, 1.0);
           gl_Position = projectionMatrix * mv;
 
-          vColor  = mix(uColorA, uColorB, aSeed) + ring * uPulse * 0.9;
-          vAlpha  = smoothstep(uFadeFar, uFadeNear, -mv.z) * aTaper;
-          vAlpha *= 0.75 + 0.25 * sin(uTime * 0.6 + aSeed * 14.0);
+          vColor = mix(uColorA, uColorB, aHue) + aEnd * 0.95;   // hot at the head
+          vAlpha = pow(aEnd, 1.1) * meteorFade(q) * alive
+                 * smoothstep(uFadeFar, uFadeNear, -mv.z);
         }
       `,
       fragmentShader: `
@@ -231,7 +258,51 @@ function init() {
       `,
     });
 
-    return new THREE.LineSegments(geo, mat);
+    const headMat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: {
+        ...common,
+        uOpacity:    { value: 1 },
+        uSize:       { value: M.headSize },
+        uPixelRatio: { value: 1 },
+      },
+      vertexShader: `
+        ${COMMON_GLSL}
+        ${METEOR_GLSL}
+        uniform float uSize, uPixelRatio;
+        uniform vec3  uColorA, uColorB;
+        varying vec3  vColor;
+        varying float vAlpha;
+
+        void main() {
+          float alive;
+          float q = meteorQ(alive);
+          vec4 mv = modelViewMatrix * vec4(meteorHead(q), 1.0);
+          gl_Position  = projectionMatrix * mv;
+          gl_PointSize = uSize * uPixelRatio * (60.0 / max(-mv.z, 1.0));
+
+          vColor = mix(uColorA, uColorB, aHue) + 0.85;          // white-hot core
+          vAlpha = meteorFade(q) * alive * smoothstep(uFadeFar, uFadeNear, -mv.z);
+        }
+      `,
+      fragmentShader: `
+        uniform float uOpacity;
+        varying vec3  vColor;
+        varying float vAlpha;
+        void main() {
+          float d = length(gl_PointCoord - vec2(0.5));
+          if (d > 0.5) discard;
+          float glow = pow(smoothstep(0.5, 0.0, d), 1.7) + pow(smoothstep(0.16, 0.0, d), 1.0) * 0.8;
+          gl_FragColor = vec4(vColor, glow * vAlpha * uOpacity);
+        }
+      `,
+    });
+
+    const trailsObj = new THREE.LineSegments(trailGeo, trailMat);
+    const headsObj  = new THREE.Points(headGeo, headMat);
+    trailsObj.frustumCulled = false;
+    headsObj.frustumCulled  = false;
+    return { trails: trailsObj, heads: headsObj };
   }
 
   // ---------- wireframe mesh across the bottom ----------
@@ -391,7 +462,7 @@ function init() {
     const blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
     const ink = c => (light ? c.clone().multiplyScalar(0.62) : c);
 
-    for (const [o, base] of [[chains, 0.85], [grid, 0.62], [dust, 0.9]]) {
+    for (const [o, base] of [[grid, 0.62], [trails, 0.95], [heads, 1], [dust, 0.9]]) {
       const m = o.material;
       m.uniforms.uColorA.value.copy(ink(a));
       m.uniforms.uColorB.value.copy(ink(b));
@@ -415,6 +486,7 @@ function init() {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     dust.material.uniforms.uPixelRatio.value = dpr;
+    heads.material.uniforms.uPixelRatio.value = dpr;
   }
   resize();
   window.addEventListener('resize', resize);
@@ -423,8 +495,6 @@ function init() {
   const pointer = { x: 0, y: 0 };            // normalised device coords
   const eased   = { x: 0, y: 0 };
   let pulseT    = -1;                         // seconds into a shockwave, -1 = idle
-  let spinKick  = 0;                          // extra tumble imparted by a click
-  let rotTime   = 0;                          // drives chain rotation
   let scrollN   = 0;                          // 0..1 down the page
   const pulseOrigin = new THREE.Vector3();
 
@@ -442,7 +512,6 @@ function init() {
       group.updateWorldMatrix(true, false);
       group.worldToLocal(pulseOrigin);
       pulseT = 0;
-      spinKick = 4;
     }, { passive: true });
 
     window.addEventListener('scroll', () => {
@@ -468,7 +537,6 @@ function init() {
   // Reduced motion: draw one still frame and stop.
   if (reduceMotion) {
     shared.uTime.value = 12;
-    shared.uRotTime.value = 12;
     renderer.render(scene, camera);
     window.addEventListener('resize', () => renderer.render(scene, camera));
     return;
@@ -492,10 +560,6 @@ function init() {
     camera.position.z = CONFIG.cameraZ - scrollN * 12;
     camera.lookAt(0, 0, 0);
 
-    // a click briefly speeds up the tumble, then settles back
-    spinKick *= Math.pow(0.15, dt);
-    rotTime += (1 + spinKick) * dt;
-
     // whole scene leans toward the pointer and turns gently as the page scrolls
     group.rotation.x += (eased.y * CONFIG.tilt - group.rotation.x) * Math.min(dt * 2, 1);
     group.rotation.y += (eased.x * CONFIG.tilt + scrollN * CONFIG.scrollTurn - group.rotation.y) * Math.min(dt * 2, 1);
@@ -515,7 +579,6 @@ function init() {
     }
 
     shared.uTime.value = t;
-    shared.uRotTime.value = rotTime;
     renderer.render(scene, camera);
   }
 
