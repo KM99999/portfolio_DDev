@@ -826,7 +826,7 @@ body.modal-open { overflow: hidden; }
 .modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.78);
+  background: rgba(0, 0, 0, 0.45);   /* light enough that the 3D scene stays visible around the panel */
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   animation: modalFade .25s ease;
