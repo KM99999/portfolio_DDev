@@ -2,11 +2,15 @@
 //  3D BACKGROUND
 //  An ambient three.js scene sitting behind every section, in three parts:
 //
-//    1. Meteors - luminous shooting stars that fall from above and streak
-//                 down into the mesh, arriving a few at a time.
+//    1. Meteors - luminous shooting stars that fall from above and land on
+//                 the mesh, each one setting off a ripple where it hits.
 //    2. Mesh    - a wavy wireframe net across the bottom, receding toward a
 //                 horizon, which is what gives the page its sense of depth.
 //    3. Dust    - a light scatter of points tying the two together.
+//
+//  Meteor motion is entirely time-driven, so the mesh can work out where and
+//  when every star lands without any CPU bookkeeping: each meteor's impact
+//  point is fixed, and the phase of its cycle says how long ago it hit.
 //
 //  Everything reacts to pointer movement (parallax + tilt), clicks (a
 //  travelling shockwave) and scroll position, and keeps rendering while a
@@ -28,7 +32,11 @@ const CONFIG = {
     rate: [0.09, 0.20],      // falls per second -> one every 5-11s each
     activeFrac:  0.3,        // fraction of that cycle spent falling
     drift:      0.30,        // sideways lean per unit fallen
-    headSize:    12,
+    headSize:     12,
+    // the splash each landing leaves in the net
+    rippleAmp:   3.0,        // how deep it dents the surface
+    rippleSpeed:  20,        // world units/sec the ring travels outward
+    rippleLife:  2.8,        // seconds before it has died away
   },
 
   // --- wireframe mesh across the bottom ---
@@ -71,8 +79,7 @@ function cssColor(name, fallback) {
 const rand = (a, b) => a + Math.random() * (b - a);
 
 // Shared GLSL: idle drift plus the click shockwave, so every layer displaces
-// itself the same way and the scene reads as one volume. Declares uTime,
-// uPulse* and uFade*, which the meteor chunk below relies on.
+// itself the same way. Declares uTime, uPulse* and uFade*.
 const COMMON_GLSL = `
   uniform float uTime, uPulse, uPulseRadius, uFadeNear, uFadeFar;
   uniform vec3  uPulseOrigin;
@@ -91,10 +98,21 @@ const COMMON_GLSL = `
   }
 `;
 
+// The mesh surface, shared by the net itself and by the meteors — that way a
+// star lands exactly on the rolling surface instead of on a flat plane.
+const MESH_GLSL = `
+  uniform float uWaveAmp, uWaveSpeed, uGridY;
+
+  float meshHeight(float x, float z) {
+    return uGridY + sin(x * 0.075 + uTime * uWaveSpeed)
+                  * cos(z * 0.095 + uTime * uWaveSpeed * 0.8) * uWaveAmp;
+  }
+`;
+
 // Meteor motion, shared by the trail streaks and the glowing heads so the two
-// stay locked together. Entirely time-driven, so the CPU never touches them.
+// stay locked together. Needs MESH_GLSL above it.
 const METEOR_GLSL = `
-  uniform float uActiveFrac, uYTop, uYFloor;
+  uniform float uActiveFrac, uYTop;
   attribute vec3  aSpawn;
   attribute vec2  aDrift;
   attribute float aRate, aStagger, aTail, aHue;
@@ -109,17 +127,20 @@ const METEOR_GLSL = `
 
   vec3 meteorDir() { return normalize(vec3(aDrift.x, -1.0, aDrift.y)); }
 
-  // Head position at progress q: falls from uYTop down to the mesh, leaning
-  // sideways as it goes.
+  // Head position at progress q. Sideways lean is taken over the nominal
+  // drop, then the landing height is read off the mesh so it touches down on
+  // the surface rather than through it.
   vec3 meteorHead(float q) {
-    float y = mix(uYTop, uYFloor, q);
-    float fallen = uYTop - y;
-    return vec3(aSpawn.x + aDrift.x * fallen, y, aSpawn.z + aDrift.y * fallen);
+    float fallen = (uYTop - uGridY) * q;
+    float x = aSpawn.x + aDrift.x * fallen;
+    float z = aSpawn.z + aDrift.y * fallen;
+    return vec3(x, mix(uYTop, meshHeight(x, z), q), z);
   }
 
-  // Bright on arrival, snuffed out as it enters the net.
+  // Full brightness the whole way down; only snuffed out in the last instant
+  // as it enters the net and hands over to the ripple.
   float meteorFade(float q) {
-    return smoothstep(0.0, 0.06, q) * smoothstep(1.0, 0.86, q);
+    return smoothstep(0.0, 0.05, q) * smoothstep(1.0, 0.965, q);
   }
 `;
 
@@ -148,8 +169,8 @@ function init() {
   const group = new THREE.Group();
   scene.add(group);
 
-  const { trails, heads } = buildMeteors(nMeteors);
-  const grid = buildGrid();
+  const { trails, heads, impacts } = buildMeteors(nMeteors);
+  const grid = buildGrid(impacts);
   const dust = buildDust(nDust);
   group.add(grid, trails, heads, dust);
 
@@ -163,18 +184,29 @@ function init() {
     uPulseOrigin: { value: new THREE.Vector3() },
     uFadeNear:    { value: 24 },
     uFadeFar:     { value: 190 },
+    uWaveAmp:     { value: CONFIG.grid.waveAmp },
+    uWaveSpeed:   { value: CONFIG.grid.waveSpeed },
+    uGridY:       { value: CONFIG.grid.y },
+    uActiveFrac:  { value: CONFIG.meteors.activeFrac },
+    uYTop:        { value: CONFIG.meteors.yTop },
   };
   for (const o of layers) Object.assign(o.material.uniforms, shared);
 
   // ---------- shooting stars ----------
-  // One entry per meteor, shared between a 2-vertex trail and a 1-vertex head.
-  // Positions are computed in the shader, so both objects opt out of frustum
-  // culling — their buffer positions are only placeholders.
+  // Each meteor is a 2-vertex trail plus a 1-vertex head, positioned entirely
+  // in the shader — so both objects opt out of frustum culling, their buffer
+  // positions being only placeholders.
+  //
+  // The impact list handed to the mesh is (x, z, rate, stagger) per meteor.
+  // Because the fall is deterministic, that is everything the net needs to
+  // know where a star landed and how long ago.
   function buildMeteors(n) {
     const M = CONFIG.meteors;
-    // Two vertex buffers: the trail (2 verts per meteor) and the head (1).
     const T = { pos: [], spawn: [], drift: [], rate: [], stagger: [], tail: [], hue: [], end: [] };
     const H = { pos: [], spawn: [], drift: [], rate: [], stagger: [], tail: [], hue: [] };
+    const impacts = [];
+
+    const drop = M.yTop - CONFIG.grid.y;     // nominal distance to the net
 
     for (let i = 0; i < n; i++) {
       const s = CONFIG.spread;
@@ -184,6 +216,9 @@ function init() {
       const st = Math.random();
       const tl = rand(M.tail[0], M.tail[1]);
       const hu = Math.random();
+
+      // where this one will come down — matches meteorHead() at q = 1
+      impacts.push(new THREE.Vector4(sx + dx * drop, sz + dz * drop, rt, st));
 
       // every vertex of one meteor gets identical parameters, so the trail
       // and its head resolve to exactly the same position each frame
@@ -218,11 +253,8 @@ function init() {
     const headGeo  = geom(H);
 
     const common = {
-      uActiveFrac: { value: M.activeFrac },
-      uYTop:       { value: M.yTop },
-      uYFloor:     { value: CONFIG.grid.y + 1 },
-      uColorA:     { value: new THREE.Color('#14e0c4') },
-      uColorB:     { value: new THREE.Color('#b86bff') },
+      uColorA: { value: new THREE.Color('#14e0c4') },
+      uColorB: { value: new THREE.Color('#b86bff') },
     };
 
     const trailMat = new THREE.ShaderMaterial({
@@ -230,6 +262,7 @@ function init() {
       uniforms: { ...common, uOpacity: { value: 0.95 } },
       vertexShader: `
         ${COMMON_GLSL}
+        ${MESH_GLSL}
         ${METEOR_GLSL}
         uniform vec3 uColorA, uColorB;
         attribute float aEnd;
@@ -268,6 +301,7 @@ function init() {
       },
       vertexShader: `
         ${COMMON_GLSL}
+        ${MESH_GLSL}
         ${METEOR_GLSL}
         uniform float uSize, uPixelRatio;
         uniform vec3  uColorA, uColorB;
@@ -279,7 +313,9 @@ function init() {
           float q = meteorQ(alive);
           vec4 mv = modelViewMatrix * vec4(meteorHead(q), 1.0);
           gl_Position  = projectionMatrix * mv;
-          gl_PointSize = uSize * uPixelRatio * (60.0 / max(-mv.z, 1.0));
+          // swells slightly just before touchdown, like it is bearing down
+          float swell = 1.0 + 0.5 * smoothstep(0.75, 1.0, q);
+          gl_PointSize = uSize * swell * uPixelRatio * (60.0 / max(-mv.z, 1.0));
 
           vColor = mix(uColorA, uColorB, aHue) + 0.85;          // white-hot core
           vAlpha = meteorFade(q) * alive * smoothstep(uFadeFar, uFadeNear, -mv.z);
@@ -292,7 +328,8 @@ function init() {
         void main() {
           float d = length(gl_PointCoord - vec2(0.5));
           if (d > 0.5) discard;
-          float glow = pow(smoothstep(0.5, 0.0, d), 1.7) + pow(smoothstep(0.16, 0.0, d), 1.0) * 0.8;
+          float glow = pow(smoothstep(0.5, 0.0, d), 1.7)
+                     + pow(smoothstep(0.16, 0.0, d), 1.0) * 0.8;
           gl_FragColor = vec4(vColor, glow * vAlpha * uOpacity);
         }
       `,
@@ -302,23 +339,25 @@ function init() {
     const headsObj  = new THREE.Points(headGeo, headMat);
     trailsObj.frustumCulled = false;
     headsObj.frustumCulled  = false;
-    return { trails: trailsObj, heads: headsObj };
+    return { trails: trailsObj, heads: headsObj, impacts };
   }
 
   // ---------- wireframe mesh across the bottom ----------
   // A flat lattice laid in the XZ plane and pushed below the content. Running
   // it away from the camera to a horizon is what sells the depth; a rolling
-  // sine wave in the vertex shader keeps it alive.
-  function buildGrid() {
+  // sine wave keeps it alive, and each meteor landing dents it with an
+  // expanding ring that decays away.
+  function buildGrid(impacts) {
     const g = CONFIG.grid;
+    const M = CONFIG.meteors;
     const halfW = g.width / 2;
     const pos = [], fade = [], mixv = [];
 
     const xAt = i => -halfW + (g.width * i) / g.cols;
     const zAt = j => g.zNear - ((g.zNear - g.zFar) * j) / g.rows;
 
-    // y is baked in rather than set via object position, so the shockwave
-    // (which works in group space) lines up with the rest of the scene.
+    // y is baked in rather than set via object position, so the shockwave and
+    // the impact points (both in group space) line up with the rest.
     const push = (x, z) => {
       pos.push(x, g.y, z);
       const near = 1 - (g.zNear - z) / (g.zNear - g.zFar);   // 1 near .. 0 far
@@ -338,18 +377,25 @@ function init() {
     geo.setAttribute('aFade',    new THREE.Float32BufferAttribute(fade, 1));
     geo.setAttribute('aMix',     new THREE.Float32BufferAttribute(mixv, 1));
 
+    const N = impacts.length;
+
     const mat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       uniforms: {
-        uOpacity:   { value: 0.62 },
-        uWaveAmp:   { value: g.waveAmp },
-        uWaveSpeed: { value: g.waveSpeed },
-        uColorA:    { value: new THREE.Color('#14e0c4') },
-        uColorB:    { value: new THREE.Color('#b86bff') },
+        uOpacity:     { value: 0.62 },
+        uImpacts:     { value: impacts },
+        uRippleAmp:   { value: M.rippleAmp },
+        uRippleSpeed: { value: M.rippleSpeed },
+        uRippleLife:  { value: M.rippleLife },
+        uColorA:      { value: new THREE.Color('#14e0c4') },
+        uColorB:      { value: new THREE.Color('#b86bff') },
       },
       vertexShader: `
         ${COMMON_GLSL}
-        uniform float uWaveAmp, uWaveSpeed;
+        ${MESH_GLSL}
+        uniform float uActiveFrac, uYTop;
+        uniform float uRippleAmp, uRippleSpeed, uRippleLife;
+        uniform vec4  uImpacts[${N}];        // xy = landing point, z = rate, w = stagger
         uniform vec3  uColorA, uColorB;
         attribute float aFade, aMix;
         varying vec3  vColor;
@@ -357,18 +403,39 @@ function init() {
 
         void main() {
           vec3 p = position;
+          p.y = meshHeight(p.x, p.z);        // the rolling surface
 
-          // two crossing waves so the surface rolls rather than pulses
-          p.y += sin(p.x * 0.075 + uTime * uWaveSpeed)
-               * cos(p.z * 0.095 + uTime * uWaveSpeed * 0.8) * uWaveAmp;
+          // Every meteor lands at a known point; the phase of its cycle says
+          // how long ago. Sum an expanding, decaying ring for each recent one.
+          float splash = 0.0;
+          for (int i = 0; i < ${N}; i++) {
+            vec4 im = uImpacts[i];
+            float cycle = fract(uTime * im.z + im.w);
+            float since = cycle - uActiveFrac;
+            since += step(since, 0.0);                  // wrap to the previous hit
+            float t = since / im.z;                     // seconds since it landed
 
-          float ring = shock(p);
+            float d     = distance(p.xz, im.xy);
+            float front = t * uRippleSpeed;             // where the ring has got to
+            float ring  = exp(-pow((d - front) * 0.19, 2.0));
+            float decay = exp(-t * 2.2 / uRippleLife) * step(t, uRippleLife);
+            float atten = 1.0 / (1.0 + d * 0.05);       // weaker further out
+
+            splash -= uRippleAmp * cos((d - front) * 0.38) * ring * decay * atten;
+          }
+          p.y += splash;
+
+          float shockRing = shock(p);
 
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
 
-          vColor = mix(uColorA, uColorB, aMix) + ring * uPulse * 1.1;
-          vAlpha = smoothstep(uFadeFar, uFadeNear, -mv.z) * aFade;
+          // lines lit by a fresh splash glow a little
+          vColor = mix(uColorA, uColorB, aMix)
+                 + shockRing * uPulse * 1.1
+                 + abs(splash) * 0.16;
+          vAlpha = smoothstep(uFadeFar, uFadeNear, -mv.z) * aFade
+                 * (1.0 + abs(splash) * 0.35);
         }
       `,
       fragmentShader: `
