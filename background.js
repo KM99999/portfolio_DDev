@@ -25,10 +25,10 @@ const CONFIG = {
     count:        28,
     yTop:         48,        // where they enter, well above the content
     tail:    [7, 20],        // streak length
-    rate: [0.05, 0.13],      // falls per second -> one every 8-20s each
-    activeFrac:  0.2,        // fraction of that cycle spent falling
+    rate: [0.09, 0.20],      // falls per second -> one every 5-11s each
+    activeFrac:  0.3,        // fraction of that cycle spent falling
     drift:      0.30,        // sideways lean per unit fallen
-    headSize:     9,
+    headSize:    12,
   },
 
   // --- wireframe mesh across the bottom ---
